@@ -1,0 +1,379 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+
+enum University
+{
+    Subdivisions,
+    Centers,
+    Faculty
+}
+
+class Chair : IDateAndCopy
+{
+    public string Name { get; set; }
+    public string Specialization { get; set; }
+    public DateTime CreationDate { get; set; }
+    public DateTime Date { get; set; }
+
+    public Chair(string name, string specialization, DateTime creationDate)
+    {
+        Name = name;
+        Specialization = specialization;
+        CreationDate = creationDate;
+        Date = DateTime.Now;
+    }
+
+    public Chair()
+    {
+        Name = "Default Chair";
+        Specialization = "Default Specialization";
+        CreationDate = DateTime.Now;
+        Date = DateTime.Now;
+    }
+
+    public object DeepCopy()
+    {
+        return new Chair(Name, Specialization, CreationDate) { Date = Date };
+    }
+
+    public override string ToString()
+    {
+        return $"Chair Name: {Name}, Specialization: {Specialization}, Creation Date: {CreationDate}";
+    }
+}
+
+class Person : IDateAndCopy
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public DateTime Date { get; set; }
+
+    public Person(string firstName, string lastName)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        Date = DateTime.Now;
+    }
+
+    public object DeepCopy()
+    {
+        return new Person(FirstName, LastName) { Date = Date };
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj == null || GetType() != obj.GetType())
+            return false;
+
+        Person other = (Person)obj;
+        return FirstName == other.FirstName && LastName == other.LastName;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(FirstName, LastName);
+    }
+
+    public override string ToString()
+    {
+        return $"{FirstName} {LastName}";
+    }
+}
+
+interface IDateAndCopy
+{
+    object DeepCopy();
+    DateTime Date { get; set; }
+}
+
+class Section
+{
+    public string SectionName { get; set; }
+    public bool IsDepartment { get; set; }
+
+    public Section(string sectionName, bool isDepartment)
+    {
+        SectionName = sectionName;
+        IsDepartment = isDepartment;
+    }
+
+    public Section()
+    {
+        SectionName = "Default Section";
+        IsDepartment = false;
+    }
+
+    public override string ToString()
+    {
+        return $"Section Name: {SectionName}, Is Department: {IsDepartment}";
+    }
+}
+
+class Employees : Person, IDateAndCopy
+{
+    private Education education;
+    private int age;
+    private ArrayList sections;
+    private ArrayList chairs;
+
+    public Education EmployeeEducation
+    {
+        get { return education; }
+        set { education = value; }
+    }
+
+    public int EmployeeAge
+    {
+        get { return age; }
+        set
+        {
+            if (value <= 30 || value >= 50)
+            {
+                throw new ArgumentOutOfRangeException("Employee age should be between 31 and 49.");
+            }
+            age = value;
+        }
+    }
+    public object DeepCopy()
+    {
+        Employees copy = new Employees(new Person(FirstName, LastName), EmployeeEducation, EmployeeAge);
+        copy.sections = new ArrayList(sections);
+        copy.chairs = new ArrayList(chairs);
+        return copy;
+    }
+
+
+    public ArrayList SectionsList
+    {
+        get { return sections; }
+        set { sections = value; }
+    }
+
+    public ArrayList ChairsList
+    {
+        get { return chairs; }
+        set { chairs = value; }
+    }
+
+    public Employees(Person person, Education education, int age) : base(person.FirstName, person.LastName)
+    {
+        EmployeeEducation = education;
+        EmployeeAge = age;
+        sections = new ArrayList();
+        chairs = new ArrayList();
+    }
+
+    public override string ToString()
+    {
+        string sectionsInfo = "Sections List:\n";
+        foreach (Section section in sections)
+        {
+            sectionsInfo += section.ToString() + "\n";
+        }
+
+        string chairsInfo = "Chairs List:\n";
+        foreach (Chair chair in chairs)
+        {
+            chairsInfo += chair.ToString() + "\n";
+        }
+
+        return $"{base.ToString()}, Education: {EmployeeEducation}, Age: {EmployeeAge}\n{sectionsInfo}\n{chairsInfo}";
+    }
+
+    public string ToShortString()
+    {
+        return $"{base.ToString()}, Education: {EmployeeEducation}, Age: {EmployeeAge}";
+    }
+
+    public IEnumerator GetEnumerator()
+    {
+        foreach (var section in sections)
+        {
+            yield return section;
+        }
+
+        foreach (var chair in chairs)
+        {
+            yield return chair;
+        }
+    }
+
+    public IEnumerable GetChairsByAge(int minAge)
+    {
+        foreach (Chair chair in chairs)
+        {
+            if (chair.Date.Year - base.Date.Year >= minAge)
+            {
+                yield return chair;
+            }
+        }
+    }
+}
+
+class Education
+{
+    public string Degree { get; set; }
+    public string Field { get; set; }
+
+    public Education(string degree, string field)
+    {
+        Degree = degree;
+        Field = field;
+    }
+
+    public override string ToString()
+    {
+        return $"{Degree} in {Field}";
+    }
+}
+
+class TestCollections<TKey, TValue>
+    where TValue : TKey
+{
+    public List<TKey> keys;
+    public Dictionary<TKey, TValue> keyValuePairs;
+    public Dictionary<string, TValue> stringKeyValuePairs;
+
+    public TestCollections(int numElements)
+    {
+        keys = new List<TKey>();
+        keyValuePairs = new Dictionary<TKey, TValue>();
+        stringKeyValuePairs = new Dictionary<string, TValue>();
+
+        for (int i = 0; i < numElements; i++)
+        {
+            TKey key = GenerateKey(i);
+            TValue value = GenerateValue(i);
+
+            keys.Add(key);
+            keyValuePairs.Add(key, value);
+            stringKeyValuePairs.Add(key.ToString(), value);
+        }
+    }
+
+    private TKey GenerateKey(int value)
+    {
+        return (TKey)(object)(value * 2);
+    }
+
+    private TValue GenerateValue(int value)
+    {
+        string generatedValue = $"Value-{value}";
+
+        try
+        {
+            return (TValue)Convert.ChangeType(value * 2, typeof(TValue));
+        }
+        catch (FormatException)
+        {
+            throw new FormatException($"Cannot convert '{generatedValue}' to {typeof(TValue).Name}");
+        }
+    }
+
+    public void SearchElements()
+    {
+        MeasureSearchTime(keys[0]);
+        MeasureSearchTime(keys[keys.Count / 2]);
+        MeasureSearchTime(keys[keys.Count - 1]);
+        MeasureSearchTime(GenerateKey(1000));
+
+    }
+
+    public void MeasureSearchTime(TKey keyToSearch)
+    {
+        Stopwatch stopwatch = new Stopwatch();
+
+        // Measure time for List<TKey>
+        stopwatch.Start();
+        bool listContains = keys.Contains(keyToSearch);
+        stopwatch.Stop();
+        Console.WriteLine($"List<TKey> contains: {listContains}. Elapsed time: {stopwatch.Elapsed}");
+
+        stopwatch.Restart();
+        bool dictionaryContainsKey = keyValuePairs.ContainsKey(keyToSearch);
+        stopwatch.Stop();
+        Console.WriteLine($"Dictionary<TKey, TValue> contains key: {dictionaryContainsKey}. Elapsed time: {stopwatch.Elapsed}");
+
+        stopwatch.Restart();
+        bool dictionaryContainsValue = stringKeyValuePairs.ContainsKey(keyToSearch.ToString());
+        stopwatch.Stop();
+        Console.WriteLine($"Dictionary<string, TValue> contains value: {dictionaryContainsValue}. Elapsed time: {stopwatch.Elapsed}");
+
+        Console.WriteLine();
+    }
+
+
+    
+}
+
+class Program
+{
+    static void Main()
+    {
+        Person person1 = new Person("Lubomir", "Tsinstiruk");
+        Person person2 = new Person("Lubomir", "Tsintsiruk");
+
+        Console.WriteLine($"References equality: {ReferenceEquals(person1, person2)}");
+        Console.WriteLine($"Objects equality: {person1.Equals(person2)}");
+        Console.WriteLine($"Person1 hash code: {person1.GetHashCode()}");
+        Console.WriteLine($"Person2 hash code: {person2.GetHashCode()}");
+
+        Employees employees = new Employees(person1, new Education("PhD", "Computer Science"), 35);
+        employees.SectionsList.Add(new Section("Section1", true));
+        employees.ChairsList.Add(new Chair("Chair1", "Specialization1", new DateTime(2022, 1, 1, 18, 30, 25)));
+        employees.ChairsList.Add(new Chair("Chair2", "Specialization2", new DateTime(2022, 2, 2, 18, 30, 25)));
+
+        Console.WriteLine("\nEmployee Info:");
+        Console.WriteLine(employees.ToString());
+
+        Console.WriteLine("\nEmployee Person Info:");
+        Console.WriteLine(employees.ToShortString());
+
+        Employees copyEmployees = (Employees)employees.DeepCopy();
+        copyEmployees.EmployeeAge = 40;
+
+        Console.WriteLine("\nOriginal Employee Info After Changing Age:");
+        Console.WriteLine(employees.ToString());
+
+        Console.WriteLine("\nCopied Employee Info After Changing Age:");
+        Console.WriteLine(copyEmployees.ToString());
+
+        try
+        {
+            employees.EmployeeAge = 25; 
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            Console.WriteLine("\nException Caught:");
+            Console.WriteLine(ex.Message);
+        }
+
+        Console.WriteLine("\nAll Sections and Chairs:");
+        foreach (var item in employees)
+        {
+            Console.WriteLine(item);
+        }
+
+        Console.WriteLine("\nChairs with Employee Age > 35:");
+        foreach (Chair chair in employees.GetChairsByAge(35))
+        {
+            Console.WriteLine(chair);
+        }
+    
+
+
+    Console.Write("Enter the number of elements: ");
+        int numElements;
+        while (!int.TryParse(Console.ReadLine(), out numElements))
+        {
+            Console.WriteLine("Invalid input. Please enter a valid integer value.");
+            Console.Write("Enter the number of elements: ");
+        }
+
+        TestCollections<int, int> testCollections = new TestCollections<int, int>(numElements);
+        testCollections.SearchElements();
+    }
+}
